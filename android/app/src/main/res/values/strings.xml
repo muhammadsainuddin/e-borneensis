@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">eBorneensis</string>
+    <string name="title_activity_main">eBorneensis</string>
+    <string name="package_name">com.eborneensis.app</string>
+    <string name="custom_url_scheme">com.eborneensis.app</string>
+</resources>
