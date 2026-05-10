@@ -3,194 +3,78 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 const router = useRouter()
 
-
-
-const emit = defineEmits(['loading-finished'])
-
-// Variable to control current slide
 const slide = ref(1)
+const totalSlides = 3
 
-// Function to notify App.vue to hide this screen
+function nextSlide() {
+  if (slide.value < totalSlides) {
+    slide.value++
+  }
+}
+
 function skipSplash() {
   router.push('/login')
 }
 </script>
 
 <template>
-  <div class="splash-container">
+  <div class="fixed inset-0 w-full h-full z-[9999] bg-black text-white font-sans">
     
-    <div class="app-branding">
-      <img src="/logo/logo.png" alt="eBorneensis Logo" class="main-logo" />
+    <div class="absolute top-[10%] left-0 w-full text-center z-10">
+      <img src="/logo/logo.png" alt="eBorneensis Logo" class="max-w-[80%] h-auto drop-shadow-lg mx-auto" />
     </div>
 
-    <q-carousel
-      v-model="slide"
-      transition-prev="slide-right"
-      transition-next="slide-left"
-      swipeable
-      animated
-      navigation
-      control-color="white"
-      class="full-screen-carousel"
-    >
-      <q-carousel-slide :name="1" img-src="/splash/1.jpeg">
-        <div class="overlay"></div>
-        <div class="slide-content">
-          <h2 class="slide-title">Discover Species</h2>
-          <p class="slide-desc">Explore the rich biodiversity of Borneo with our comprehensive database.</p>
+    <div class="relative w-full h-full overflow-hidden">
+      <div v-show="slide === 1" class="absolute inset-0 w-full h-full transition-opacity duration-500">
+        <img src="/splash/1.jpeg" class="w-full h-full object-cover" />
+        <div class="absolute inset-0 bg-gradient-to-b from-black/30 to-black/95 z-0"></div>
+        <div class="absolute bottom-[20%] left-0 w-full px-8 text-center z-10">
+          <h2 class="text-3xl font-bold mb-2 drop-shadow-md">Discover Species</h2>
+          <p class="text-lg opacity-95 drop-shadow-sm">Explore the rich biodiversity of Borneo with our comprehensive database.</p>
         </div>
-      </q-carousel-slide>
+      </div>
 
-      <q-carousel-slide :name="2" img-src="/splash/2.jpeg">
-        <div class="overlay"></div>
-        <div class="slide-content">
-          <h2 class="slide-title">Record Sightings</h2>
-          <p class="slide-desc">Help us monitor wildlife populations by reporting your encounters.</p>
+      <div v-show="slide === 2" class="absolute inset-0 w-full h-full transition-opacity duration-500">
+        <img src="/splash/2.jpeg" class="w-full h-full object-cover" />
+        <div class="absolute inset-0 bg-gradient-to-b from-black/30 to-black/95 z-0"></div>
+        <div class="absolute bottom-[20%] left-0 w-full px-8 text-center z-10">
+          <h2 class="text-3xl font-bold mb-2 drop-shadow-md">Record Sightings</h2>
+          <p class="text-lg opacity-95 drop-shadow-sm">Help us monitor wildlife populations by reporting your encounters.</p>
         </div>
-      </q-carousel-slide>
+      </div>
 
-      <q-carousel-slide :name="3" img-src="/splash/3.jpeg">
-        <div class="overlay"></div>
-        <div class="slide-content">
-          <h2 class="slide-title">Interactive Map</h2>
-          <p class="slide-desc">View habitat distributions and track animal locations in real-time.</p>
+      <div v-show="slide === 3" class="absolute inset-0 w-full h-full transition-opacity duration-500">
+        <img src="/splash/3.jpeg" class="w-full h-full object-cover" />
+        <div class="absolute inset-0 bg-gradient-to-b from-black/30 to-black/95 z-0"></div>
+        <div class="absolute bottom-[20%] left-0 w-full px-8 text-center z-10">
+          <h2 class="text-3xl font-bold mb-2 drop-shadow-md">Interactive Map</h2>
+          <p class="text-lg opacity-95 drop-shadow-sm">View habitat distributions and track animal locations in real-time.</p>
         </div>
-      </q-carousel-slide>
-    </q-carousel>
+      </div>
+    </div>
 
-    <div class="actions-container">
-      <q-btn 
-        v-if="slide < 3"
-        flat 
-        rounded 
-        color="white" 
-        label="Skip" 
-        class="skip-btn"
-        @click="skipSplash"
-      />
-      <q-btn 
-        v-else
-        unelevated 
-        rounded 
-        color="primary" 
-        text-color="white"
-        label="Get Started" 
-        class="start-btn"
-        @click="skipSplash"
-      />
+    <div class="absolute bottom-[6%] left-0 w-full flex justify-center items-center gap-4 z-20">
+      <button 
+        v-if="slide < 3" 
+        @click="skipSplash" 
+        class="text-base px-6 py-2 bg-white/10 backdrop-blur-md rounded-full drop-shadow-md hover:bg-white/20 transition duration-300"
+      >
+        Skip
+      </button>
+      <button 
+        v-if="slide < 3" 
+        @click="nextSlide" 
+        class="text-base px-8 py-2 bg-white/20 backdrop-blur-md rounded-full drop-shadow-md hover:bg-white/30 transition duration-300"
+      >
+        Next
+      </button>
+      <button 
+        v-if="slide === 3" 
+        @click="skipSplash" 
+        class="text-lg px-10 py-3 font-bold bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition duration-300"
+      >
+        Get Started
+      </button>
     </div>
   </div>
 </template>
-
-<style scoped>
-.splash-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 9999;
-  background-color: #000;
-}
-
-.app-branding {
-  position: absolute;
-  top: 10%; 
-  left: 0;
-  width: 100%;
-  text-align: center;
-  z-index: 10; 
-}
-
-.main-logo {
-  max-width: 80%; /* Laraskan saiz mengikut kesesuaian logo anda */
-  height: auto;
-  filter: drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.5)); /* Tambah bayang supaya nampak jelas atas gambar */
-}
-
-.splash-title {
-  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  font-size: 2.8rem;
-  font-weight: 300;
-  color: #F8D3D6; 
-  letter-spacing: 2px;
-  margin: 0;
-  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8), 0px 0px 4px rgba(0, 0, 0, 0.5); 
-}
-
-.splash-subtitle {
-  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  font-size: 1rem;
-  font-weight: 400;
-  color: #FFFFFF;
-  letter-spacing: 3px;
-  margin-top: 0px;
-  text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.9);
-}
-
-.full-screen-carousel {
-  height: 100vh;
-  width: 100vw;
-}
-
-.overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.95) 100%);
-  z-index: 1;
-}
-
-.slide-content {
-  position: absolute;
-  bottom: 20%; 
-  left: 0;
-  width: 100%;
-  padding: 0 2rem;
-  text-align: center;
-  z-index: 2;
-  color: white;
-}
-
-.slide-title {
-  font-size: 2.2rem;
-  font-weight: bold;
-  margin-bottom: 0.5rem;
-  line-height: 1.2;
-  text-shadow: 2px 2px 6px rgba(250, 248, 248, 0.9);
-}
-
-.slide-desc {
-  font-size: 1.1rem;
-  opacity: 0.95;
-  margin: 0;
-  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.9);
-}
-
-.actions-container {
-  position: absolute;
-  bottom: 6%; 
-  left: 0;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  z-index: 3;
-}
-
-.skip-btn {
-  font-size: 1rem;
-  padding: 8px 32px;
-  background-color: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(5px);
-  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
-}
-
-.start-btn {
-  font-size: 1.1rem;
-  padding: 10px 36px;
-  font-weight: bold;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-}
-</style>

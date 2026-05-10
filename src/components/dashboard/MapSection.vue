@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { useQuasar } from 'quasar'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
-const $q = useQuasar()
-const props = defineProps({ isActive: Boolean })
+const props = defineProps<{ 
+  isActive: boolean,
+  refreshTrigger: number 
+}>()
+
+const emit = defineEmits(['location-update'])
 
 // --- Status Rangkaian (Online/Offline) ---
 const isOnline = ref(navigator.onLine)
@@ -17,31 +20,23 @@ const lat = ref('Loading...')
 const lng = ref('Loading...')
 const altitude = ref('N/A')
 const accuracy = ref('Loading...')
-const accuracyValue = ref<number | null>(null) // Untuk pengiraan signal
+const accuracyValue = ref<number | null>(null)
 
 let geoWatchId: number | null = null
 let latestCoords: [number, number] | null = null
 
-// Kira Signal Strength berdasarkan Accuracy GPS
-const signalIcon = computed(() => {
-  if (!trackingLocation.value || accuracyValue.value === null) return 'signal_cellular_off'
-  if (accuracyValue.value <= 10) return 'signal_cellular_4_bar' // Sangat tepat (<10m)
-  if (accuracyValue.value <= 50) return 'signal_cellular_3_bar' // Sederhana (<50m)
-  if (accuracyValue.value <= 100) return 'signal_cellular_2_bar' // Lemah (<100m)
-  return 'signal_cellular_1_bar' // Sangat lemah
-})
-
-const signalColor = computed(() => {
-  if (!trackingLocation.value || accuracyValue.value === null) return 'grey-5'
-  if (accuracyValue.value <= 15) return 'positive' // Hijau
-  if (accuracyValue.value <= 50) return 'warning'  // Kuning
-  return 'negative'                                // Merah
+const signalColorClass = computed(() => {
+  if (!trackingLocation.value || accuracyValue.value === null) return 'text-gray-400'
+  if (accuracyValue.value <= 15) return 'text-green-500' 
+  if (accuracyValue.value <= 50) return 'text-yellow-500' 
+  return 'text-red-500'                             
 })
 
 // --- Map State ---
 let map: maplibregl.Map | null = null
 const mapContainer = ref<HTMLElement | null>(null)
 let userMarker: maplibregl.Marker | null = null
+let encounterMarkers: maplibregl.Marker[] = [] // Menyimpan marker rekod offline
 
 const currentStyle = ref(localStorage.getItem('mapStyle') || 'street')
 const mapStyles = {
@@ -49,12 +44,7 @@ const mapStyles = {
   sat: {
     version: 8,
     sources: {
-      'raster-tiles': {
-        type: 'raster',
-        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-        tileSize: 256,
-        attribution: 'Esri'
-      }
+      'raster-tiles': { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, attribution: 'Esri' }
     },
     layers: [{ id: 'simple-tiles', type: 'raster', source: 'raster-tiles', minzoom: 0, maxzoom: 18 }]
   },
@@ -62,10 +52,8 @@ const mapStyles = {
 }
 
 onMounted(() => {
-  // Pasang listener untuk status internet
   window.addEventListener('online', updateOnlineStatus)
   window.addEventListener('offline', updateOnlineStatus)
-  
   initMap()
 })
 
@@ -86,15 +74,75 @@ function initMap() {
   })
 
   map.on('style.load', () => drawAccuracyCircle())
-  map.on('load', () => { if (trackingLocation.value) startGPS() })
+  map.on('load', () => { 
+    if (trackingLocation.value) startGPS() 
+    loadEncounters() // Muat marker rekod apabila peta siap diload
+  })
 }
+
+// Fungsi untuk memuatkan rekod dan melukis marker
+function loadEncounters() {
+  if (!map) return
+
+  // Buang marker lama sebelum render yang baru
+  encounterMarkers.forEach(m => m.remove())
+  encounterMarkers = []
+
+  const records = JSON.parse(localStorage.getItem('encounters') || '[]')
+  
+  records.forEach((record: any) => {
+    if (!record.lat || !record.lng) return
+
+    // HTML untuk memaparkan gambar dalam Popup (Atau placeholder jika tiada)
+    const imgHtml = record.hasPhoto === 'yes' && record.photoUri
+      ? `<img src="${record.photoUri}" style="width: 100%; height: 130px; object-fit: cover; border-radius: 8px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" />`
+      : `<div style="width: 100%; height: 80px; background: #f3f4f6; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 11px; font-weight: bold; letter-spacing: 1px;">NO PHOTO</div>`
+
+    // Reka bentuk Popup yang kemas
+    const popupHtml = `
+      <div style="font-family: ui-sans-serif, system-ui, sans-serif; color: #000; min-width: 180px; padding: 2px;">
+        ${imgHtml}
+        <h4 style="margin: 0 0 2px 0; font-weight: 800; font-size: 16px; color: #14532d;">${record.species}</h4>
+        <p style="margin: 0 0 8px 0; font-size: 10px; font-weight: 800; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">${record.category}</p>
+        <p style="margin: 0 0 10px 0; font-size: 13px; line-height: 1.4; color: #374151;">${record.notes || 'Tiada deskripsi tambahan.'}</p>
+        <div style="border-top: 1px solid #e5e7eb; padding-top: 8px; font-size: 10px; color: #9ca3af; display: flex; justify-content: space-between;">
+          <span>${record.date}</span>
+          <span>${record.time}</span>
+        </div>
+      </div>
+    `
+
+    const popup = new maplibregl.Popup({ offset: [0, -15], closeButton: true, maxWidth: '280px' })
+      .setHTML(popupHtml)
+
+    // Ikon Kustom untuk Marker (Warna Hijau Daun)
+    const el = document.createElement('div')
+    el.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="#14532d" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.4)); cursor: pointer;">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+        <circle cx="12" cy="10" r="3" fill="#ffffff"></circle>
+      </svg>
+    `
+
+    const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+      .setLngLat([record.lng, record.lat])
+      .setPopup(popup)
+      .addTo(map!)
+    
+    encounterMarkers.push(marker)
+  })
+}
+
+// Pantau perubahan dari DashboardPage untuk render semula marker
+watch(() => props.refreshTrigger, () => {
+  loadEncounters()
+})
 
 function switchMap(styleName: 'street' | 'sat' | 'topo') {
   if (map && currentStyle.value !== styleName) {
     currentStyle.value = styleName
     localStorage.setItem('mapStyle', styleName)
     map.setStyle(mapStyles[styleName])
-    $q.notify({ message: `Switched to ${styleName.toUpperCase()}`, color: 'black', position: 'top', timeout: 1000 })
   }
 }
 
@@ -104,13 +152,8 @@ watch(() => props.isActive, (newVal) => {
 
 function toggleGPS() {
   trackingLocation.value = !trackingLocation.value
-  if (trackingLocation.value) {
-    startGPS()
-    $q.notify({ message: 'GPS Started', color: 'black', position: 'top', timeout: 1000 })
-  } else {
-    stopGPS()
-    $q.notify({ message: 'GPS Paused', color: 'grey-8', position: 'top', timeout: 1000 })
-  }
+  if (trackingLocation.value) startGPS()
+  else stopGPS()
 }
 
 function startGPS() {
@@ -125,6 +168,9 @@ function startGPS() {
         
         accuracyValue.value = acc
         latestCoords = [longitude, latitude]
+
+        // HANTAR KOORDINAT KE DashboardPage
+        emit('location-update', latestCoords)
 
         if (map) {
           if (props.isActive) map.flyTo({ center: latestCoords, zoom: 16, speed: 0.8 })
@@ -147,7 +193,7 @@ function stopGPS() {
   if (geoWatchId !== null) {
     navigator.geolocation.clearWatch(geoWatchId)
     geoWatchId = null
-    accuracyValue.value = null // Reset signal
+    accuracyValue.value = null 
   }
 }
 
@@ -189,82 +235,86 @@ function drawAccuracyCircle() {
 </script>
 
 <template>
-  <div class="full-height-content relative-position">
+  <div class="h-full w-full relative">
     
-    <div ref="mapContainer" class="map-container"></div>
+    <div ref="mapContainer" class="w-full h-full"></div>
     
-    <q-card class="absolute-top-left q-ma-sm shadow-4 bg-white" style="z-index: 10; min-width: 200px; border-radius: 12px;">
+    <div class="absolute top-4 left-4 right-4 shadow-lg bg-white/60 backdrop-blur-md border border-white/50 rounded-xl z-10 overflow-hidden">
       
-      <q-card-section class="q-pa-sm bg-grey-2 row items-center justify-between" style="border-radius: 12px 12px 0 0;">
-        <div class="row items-center q-gutter-xs">
-          <q-icon name="gps_fixed" size="xs" color="black" />
-          <span class="text-caption text-weight-bold text-black">GPS STATUS</span>
+      <div class="py-1 px-3 bg-white/40 flex items-center justify-between border-b border-white/60">
+        <div class="flex items-center gap-1.5">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          <span class="text-[10px] font-bold text-black tracking-wider">GPS STATUS</span>
         </div>
-        <div class="row q-gutter-xs">
-          <q-icon :name="isOnline ? 'wifi' : 'wifi_off'" :color="isOnline ? 'black' : 'negative'" size="sm" />
-          <q-icon :name="signalIcon" :color="signalColor" size="sm" />
+        <div class="flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" :class="isOnline ? 'text-black' : 'text-red-500'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.906 14.142 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+          </svg>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" :class="[signalColorClass, trackingLocation && accuracyValue !== null ? 'animate-pulse' : '']" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M2 22h20V2L2 22z" />
+          </svg>
         </div>
-      </q-card-section>
+      </div>
       
-      <q-separator />
-      
-      <q-card-section class="q-pa-sm">
-        <div class="row text-caption" style="font-family: monospace; font-size: 0.85rem;">
-          <div class="col-3 text-grey-7 text-weight-bold">LAT</div>
-          <div class="col-9 text-right text-black text-weight-bold">{{ lat }}</div>
-          
-          <div class="col-3 text-grey-7 text-weight-bold">LNG</div>
-          <div class="col-9 text-right text-black text-weight-bold">{{ lng }}</div>
-          
-          <div class="col-3 text-grey-7 text-weight-bold">ALT</div>
-          <div class="col-9 text-right text-black text-weight-bold">{{ altitude }}</div>
-          
-          <div class="col-3 text-grey-7 text-weight-bold">ACC</div>
-          <div class="col-9 text-right text-black text-weight-bold">{{ accuracy }}</div>
+      <div class="py-1.5 px-3">
+        <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[11px] font-mono">
+          <div class="flex justify-between items-center">
+            <span class="text-gray-700 font-bold uppercase text-[9px]">Latitude</span>
+            <span class="text-black font-bold">{{ lat }}</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-gray-700 font-bold uppercase text-[9px]">Altitude</span>
+            <span class="text-black font-bold">{{ altitude }}</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-gray-700 font-bold uppercase text-[9px]">Longitude</span>
+            <span class="text-black font-bold">{{ lng }}</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-gray-700 font-bold uppercase text-[9px]">Accuracy</span>
+            <span class="text-black font-bold">{{ accuracy }}</span>
+          </div>
         </div>
-      </q-card-section>
+      </div>
+    </div>
 
-    </q-card>
+    <div class="absolute bottom-6 left-4 flex shadow-md bg-white rounded-full overflow-hidden border border-gray-200 z-10">
+      <button @click="switchMap('street')" :class="['px-3 py-1.5 text-xs font-bold transition-colors', currentStyle === 'street' ? 'bg-gray-100 text-black' : 'text-gray-500 hover:bg-gray-50']">Street</button>
+      <button @click="switchMap('sat')" :class="['px-3 py-1.5 text-xs font-bold border-l border-r border-gray-200 transition-colors', currentStyle === 'sat' ? 'bg-gray-100 text-black' : 'text-gray-500 hover:bg-gray-50']">Sat</button>
+      <button @click="switchMap('topo')" :class="['px-3 py-1.5 text-xs font-bold transition-colors', currentStyle === 'topo' ? 'bg-gray-100 text-black' : 'text-gray-500 hover:bg-gray-50']">Topo</button>
+    </div>
 
-    <q-btn-group rounded class="absolute-bottom-left q-ma-md shadow-4 bg-white" style="z-index: 10;">
-      <q-btn 
-        flat size="sm" class="q-px-sm text-weight-bold"
-        :color="currentStyle === 'street' ? 'black' : 'grey-7'" 
-        label="Street" @click="switchMap('street')" 
-      />
-      <q-btn 
-        flat size="sm" class="q-px-sm text-weight-bold"
-        :color="currentStyle === 'sat' ? 'black' : 'grey-7'" 
-        label="Sat" @click="switchMap('sat')" 
-      />
-      <q-btn 
-        flat size="sm" class="q-px-sm text-weight-bold"
-        :color="currentStyle === 'topo' ? 'black' : 'grey-7'" 
-        label="Topo" @click="switchMap('topo')" 
-      />
-    </q-btn-group>
-
-    <q-btn 
-      class="absolute-bottom-right shadow-4" 
-      style="z-index: 10; margin-bottom: 90px; margin-right: 18px;" 
-      round 
-      :color="trackingLocation ? 'white' : 'grey-3'" 
-      :text-color="trackingLocation ? 'black' : 'grey-6'" 
-      :icon="trackingLocation ? 'my_location' : 'location_disabled'" 
+    <button 
       @click="toggleGPS" 
-    />
+      :class="['absolute bottom-[100px] right-6 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-colors z-10', trackingLocation ? 'bg-white text-black' : 'bg-gray-200 text-gray-500']"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    </button>
 
   </div>
 </template>
 
-<style scoped>
-/* CSS kini sangat nipis, hanya untuk layout asas peta */
-.full-height-content {
-  height: 100%;
-  width: 100%;
+<style>
+/* CSS Tambahan Khas Untuk Modifikasi MapLibre Popup Supaya Kelihatan Moden / Tailwind-like */
+.maplibregl-popup-content {
+  border-radius: 16px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid #f3f4f6 !important;
+  padding: 12px !important;
 }
-.map-container {
-  width: 100%;
-  height: 100%;
+.maplibregl-popup-close-button {
+  font-size: 20px;
+  color: #9ca3af;
+  right: 8px !important;
+  top: 6px !important;
+}
+.maplibregl-popup-close-button:hover {
+  background-color: transparent !important;
+  color: #000 !important;
 }
 </style>

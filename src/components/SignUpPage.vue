@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useQuasar } from 'quasar'
 
 const router = useRouter()
-const $q = useQuasar()
 
 // Form Data
 const email = ref('')
@@ -23,26 +21,23 @@ const captchaVerified = ref(false)
 const ageOptions = ['Under 18', '18 - 24', '25 - 34', '35 - 44', '45 and above']
 const genderOptions = ['Male', 'Female', 'Prefer not to say']
 
-function promptConfirmation() {
+function promptConfirmation(e: Event) {
+  e.preventDefault() // Halang muat semula halaman apabila submit
+
   if (!captchaVerified.value) {
-    $q.notify({
-      color: 'negative',
-      message: 'Please verify that you are not a robot.',
-      icon: 'warning',
-      position: 'top'
-    })
+    alert('Please verify that you are not a robot.')
     return
   }
 
-  $q.dialog({
-    title: 'Registration Confirmation',
-    message: 'Are you sure all the entered information is correct?',
-    cancel: 'Review',
-    ok: 'Yes, Register',
-    persistent: true
-  }).onOk(() => {
+  if (password.value !== confirmPassword.value) {
+    alert('Passwords do not match!')
+    return
+  }
+
+  const isConfirmed = confirm('Are you sure all the entered information is correct?')
+  if (isConfirmed) {
     executeSignUp()
-  })
+  }
 }
 
 function executeSignUp() {
@@ -55,14 +50,7 @@ function executeSignUp() {
   }
   
   console.log('Data successfully sent to API:', payload)
-  
-  $q.notify({
-    color: 'positive',
-    message: 'Account successfully registered!',
-    icon: 'check_circle',
-    position: 'top'
-  })
-
+  alert('Account successfully registered!')
   router.push('/login')
 }
 
@@ -72,284 +60,89 @@ function goBackToLogin() {
 </script>
 
 <template>
-  <div class="signup-container">
+  <div class="flex flex-col h-screen bg-white px-6 pb-6 font-sans box-border text-left">
     
-    <div class="header-section">
-      <q-btn 
-        flat 
-        round 
-        dense 
-        icon="arrow_back" 
-        color="black"
-        class="back-btn"
-        @click="goBackToLogin" 
-      />
-      <h2 class="welcome-text">Create Account</h2>
+    <div class="flex items-center mt-[8vh] mb-6">
+      <button @click="goBackToLogin" class="p-2 -ml-2 rounded-full hover:bg-gray-100 transition duration-300">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+      </button>
+      <h2 class="text-3xl font-bold text-black m-0 ml-2">Create Account</h2>
     </div>
 
-    <q-form @submit="promptConfirmation" class="form-wrapper">
+    <form @submit="promptConfirmation" class="flex flex-col grow overflow-hidden w-full max-w-[400px] mx-auto">
       
-      <div class="scrollable-fields">
-        <div class="input-group">
-          <label class="input-label">Email address *</label>
-          <q-input 
-            v-model="email" 
-            outlined 
-            dense 
-            placeholder="name@example.com" 
-            class="custom-input"
-            lazy-rules
-            :rules="[
-              val => !!val || 'Email is required',
-              val => /.+@.+\..+/.test(val) || 'Invalid email format'
-            ]"
-          />
+      <div class="flex-grow overflow-y-auto overflow-x-hidden pr-1 pb-4 space-y-4">
+        
+        <div>
+          <label class="block text-sm font-semibold text-black mb-1">Email address *</label>
+          <input v-model="email" type="email" placeholder="name@example.com" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black" />
         </div>
 
-        <div class="input-group">
-          <label class="input-label">Full Name *</label>
-          <q-input 
-            v-model="name" 
-            outlined 
-            dense 
-            placeholder="John Doe" 
-            class="custom-input"
-            lazy-rules
-            :rules="[val => !!val || 'Full name is required']"
-          />
+        <div>
+          <label class="block text-sm font-semibold text-black mb-1">Full Name *</label>
+          <input v-model="name" type="text" placeholder="John Doe" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black" />
         </div>
 
-        <div class="row q-col-gutter-sm">
-          <div class="col-6 input-group">
-            <label class="input-label">Age Group *</label>
-            <q-select 
-              v-model="ageGroup" 
-              :options="ageOptions" 
-              outlined 
-              dense 
-              class="custom-input"
-              lazy-rules
-              :rules="[val => !!val || 'Selection is required']"
-            />
+        <div class="flex gap-3">
+          <div class="w-1/2">
+            <label class="block text-sm font-semibold text-black mb-1">Age Group *</label>
+            <select v-model="ageGroup" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black bg-white">
+              <option disabled value="">Select...</option>
+              <option v-for="opt in ageOptions" :key="opt" :value="opt">{{ opt }}</option>
+            </select>
           </div>
-          <div class="col-6 input-group">
-            <label class="input-label">Gender *</label>
-            <q-select 
-              v-model="gender" 
-              :options="genderOptions" 
-              outlined 
-              dense 
-              class="custom-input"
-              lazy-rules
-              :rules="[val => !!val || 'Selection is required']"
-            />
+          <div class="w-1/2">
+            <label class="block text-sm font-semibold text-black mb-1">Gender *</label>
+            <select v-model="gender" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black bg-white">
+              <option disabled value="">Select...</option>
+              <option v-for="opt in genderOptions" :key="opt" :value="opt">{{ opt }}</option>
+            </select>
           </div>
         </div>
 
-        <div class="input-group">
-          <label class="input-label">Password *</label>
-          <q-input 
-            v-model="password" 
-            outlined 
-            dense
-            :type="showPassword ? 'text' : 'password'"
-            placeholder="Create a password" 
-            class="custom-input"
-            lazy-rules
-            :rules="[
-              val => !!val || 'Password is required',
-              val => val.length >= 6 || 'Please enter at least 6 characters'
-            ]"
-          >
-            <template v-slot:append>
-              <q-icon
-                :name="showPassword ? 'visibility' : 'visibility_off'"
-                class="cursor-pointer"
-                size="xs"
-                @click="showPassword = !showPassword"
-              />
-            </template>
-          </q-input>
+        <div>
+          <label class="block text-sm font-semibold text-black mb-1">Password *</label>
+          <div class="relative">
+            <input v-model="password" :type="showPassword ? 'text' : 'password'" placeholder="Create a password" required minlength="6" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black" />
+            <button type="button" @click="showPassword = !showPassword" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-black">
+              <svg v-if="!showPassword" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+            </button>
+          </div>
         </div>
 
-        <div class="input-group">
-          <label class="input-label">Confirm Password *</label>
-          <q-input 
-            v-model="confirmPassword" 
-            outlined 
-            dense
-            :type="showConfirmPassword ? 'text' : 'password'"
-            placeholder="Re-type password" 
-            class="custom-input"
-            lazy-rules
-            :rules="[
-              val => !!val || 'Confirmation is required',
-              val => val === password || 'Passwords do not match!'
-            ]"
-          >
-            <template v-slot:append>
-              <q-icon
-                :name="showConfirmPassword ? 'visibility' : 'visibility_off'"
-                class="cursor-pointer"
-                size="xs"
-                @click="showConfirmPassword = !showConfirmPassword"
-              />
-            </template>
-          </q-input>
+        <div>
+          <label class="block text-sm font-semibold text-black mb-1">Confirm Password *</label>
+          <div class="relative">
+            <input v-model="confirmPassword" :type="showConfirmPassword ? 'text' : 'password'" placeholder="Re-type password" required minlength="6" class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black" />
+            <button type="button" @click="showConfirmPassword = !showConfirmPassword" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-black">
+              <svg v-if="!showConfirmPassword" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+            </button>
+          </div>
         </div>
 
-        <div class="captcha-box">
-          <q-checkbox v-model="captchaVerified" label="I'm not a robot" color="teal" />
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/RecaptchaLogo.svg/1200px-RecaptchaLogo.svg.png" alt="Recaptcha" class="captcha-logo" />
+        <div class="flex justify-between items-center border border-gray-300 rounded-md px-3 py-2 bg-gray-50 my-2">
+          <label class="flex items-center space-x-2 cursor-pointer">
+            <input v-model="captchaVerified" type="checkbox" class="w-5 h-5 text-teal-600 rounded focus:ring-teal-500 border-gray-300" />
+            <span class="text-sm font-medium">I'm not a robot</span>
+          </label>
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/RecaptchaLogo.svg/1200px-RecaptchaLogo.svg.png" alt="Recaptcha" class="h-6 opacity-80" />
         </div>
       </div>
 
-      <div class="action-buttons">
-        <q-btn 
-          type="submit"
-          unelevated 
-          rounded 
-          color="black" 
-          text-color="white" 
-          label="Sign up" 
-          class="full-width-btn sign-in-btn"
-        />
-        <div class="login-link-container">
-          <span class="sub-text">Already have an account? </span>
-          <a href="#" class="login-link" @click.prevent="goBackToLogin">Sign in</a>
+      <div class="flex-shrink-0 flex flex-col gap-4 pt-4 bg-white">
+        <button type="submit" class="w-full py-3 text-base font-semibold text-white bg-black rounded-full hover:bg-gray-800 transition duration-300 shadow-md">
+          Sign up
+        </button>
+        <div class="text-sm text-left">
+          <span class="text-gray-500">Already have an account? </span>
+          <a href="#" class="font-semibold text-black hover:underline" @click.prevent="goBackToLogin">Sign in</a>
         </div>
       </div>
       
-    </q-form>
-
+    </form>
   </div>
 </template>
-
-<style scoped>
-.signup-container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background-color: #ffffff;
-  padding: 0 1.5rem 1.5rem 1.5rem;
-  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  box-sizing: border-box;
-  text-align: left; /* Ensuring everything defaults to left alignment */
-}
-
-/* --- Header Section --- */
-.header-section {
-  display: flex;
-  align-items: center;
-  margin-top: 8vh;
-  margin-bottom: 1.5rem;
-  justify-content: flex-start; /* Aligned strictly to left */
-}
-
-.back-btn {
-  margin-right: 10px;
-  margin-left: -10px;
-}
-
-.welcome-text {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: #000000;
-  margin: 0;
-}
-
-/* --- Form Wrapper --- */
-.form-wrapper {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-  overflow: hidden;
-  max-width: 400px;
-  width: 100%;
-  margin: 0 auto;
-}
-
-/* --- Scrollable Fields --- */
-.scrollable-fields {
-  flex-grow: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-right: 5px;
-  padding-bottom: 1rem;
-}
-
-.scrollable-fields::-webkit-scrollbar {
-  width: 4px;
-}
-.scrollable-fields::-webkit-scrollbar-thumb {
-  background: #e0e0e0;
-  border-radius: 4px;
-}
-
-.input-group {
-  margin-bottom: 2px;
-}
-
-.input-label {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #000000;
-  margin-bottom: 4px;
-  text-align: left; /* Explicitly align label left */
-}
-
-:deep(.custom-input .q-field__control) {
-  border-radius: 8px;
-}
-
-.captcha-box {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border: 1px solid #d3d3d3;
-  border-radius: 6px;
-  padding: 8px 12px;
-  background-color: #fafafa;
-  margin-bottom: 0.5rem;
-  margin-top: 0.5rem;
-}
-
-.captcha-logo {
-  height: 25px;
-  opacity: 0.8;
-}
-
-/* --- Action Buttons --- */
-.action-buttons {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1.2rem;
-  padding-top: 1rem;
-  background-color: #fff;
-}
-
-.full-width-btn {
-  width: 100%;
-  padding: 12px 0;
-  font-size: 1rem;
-  font-weight: 600;
-  text-transform: none;
-}
-
-.login-link-container {
-  text-align: left; /* Aligned left to match the rest of the form */
-  font-size: 0.9rem;
-}
-
-.sub-text {
-  color: #666666;
-}
-
-.login-link {
-  font-weight: 600;
-  color: #000000;
-  text-decoration: none;
-}
-</style>
