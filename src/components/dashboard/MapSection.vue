@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import maplibregl from 'maplibre-gl'
+import maplibregl, { type StyleSpecification } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+// Import data dummy
+import { dummyData } from '../../data/dummyData'
 
 const props = defineProps<{ 
   isActive: boolean,
@@ -36,10 +38,10 @@ const signalColorClass = computed(() => {
 let map: maplibregl.Map | null = null
 const mapContainer = ref<HTMLElement | null>(null)
 let userMarker: maplibregl.Marker | null = null
-let encounterMarkers: maplibregl.Marker[] = [] // Menyimpan marker rekod offline
+let encounterMarkers: maplibregl.Marker[] = [] 
 
 const currentStyle = ref(localStorage.getItem('mapStyle') || 'street')
-const mapStyles = {
+const mapStyles: Record<string, string | StyleSpecification> = {
   street: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
   sat: {
     version: 8,
@@ -47,7 +49,7 @@ const mapStyles = {
       'raster-tiles': { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, attribution: 'Esri' }
     },
     layers: [{ id: 'simple-tiles', type: 'raster', source: 'raster-tiles', minzoom: 0, maxzoom: 18 }]
-  },
+  } as StyleSpecification, // <--- TAMBAH 'as StyleSpecification' DI SINI
   topo: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json'
 }
 
@@ -76,7 +78,7 @@ function initMap() {
   map.on('style.load', () => drawAccuracyCircle())
   map.on('load', () => { 
     if (trackingLocation.value) startGPS() 
-    loadEncounters() // Muat marker rekod apabila peta siap diload
+    loadEncounters() 
   })
 }
 
@@ -84,21 +86,24 @@ function initMap() {
 function loadEncounters() {
   if (!map) return
 
-  // Buang marker lama sebelum render yang baru
   encounterMarkers.forEach(m => m.remove())
   encounterMarkers = []
 
-  const records = JSON.parse(localStorage.getItem('encounters') || '[]')
+  let records = JSON.parse(localStorage.getItem('encounters') || '[]')
+
+  // MASUKKAN DATA DUMMY JIKA LOCALSTORAGE KOSONG (First Time Load)
+  if (records.length === 0) {
+    localStorage.setItem('encounters', JSON.stringify(dummyData))
+    records = dummyData
+  }
   
   records.forEach((record: any) => {
     if (!record.lat || !record.lng) return
 
-    // HTML untuk memaparkan gambar dalam Popup (Atau placeholder jika tiada)
     const imgHtml = record.hasPhoto === 'yes' && record.photoUri
       ? `<img src="${record.photoUri}" style="width: 100%; height: 130px; object-fit: cover; border-radius: 8px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" />`
       : `<div style="width: 100%; height: 80px; background: #f3f4f6; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 11px; font-weight: bold; letter-spacing: 1px;">NO PHOTO</div>`
 
-    // Reka bentuk Popup yang kemas
     const popupHtml = `
       <div style="font-family: ui-sans-serif, system-ui, sans-serif; color: #000; min-width: 180px; padding: 2px;">
         ${imgHtml}
@@ -115,7 +120,6 @@ function loadEncounters() {
     const popup = new maplibregl.Popup({ offset: [0, -15], closeButton: true, maxWidth: '280px' })
       .setHTML(popupHtml)
 
-    // Ikon Kustom untuk Marker (Warna Hijau Daun)
     const el = document.createElement('div')
     el.innerHTML = `
       <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="#14532d" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.4)); cursor: pointer;">
@@ -133,7 +137,6 @@ function loadEncounters() {
   })
 }
 
-// Pantau perubahan dari DashboardPage untuk render semula marker
 watch(() => props.refreshTrigger, () => {
   loadEncounters()
 })
@@ -169,7 +172,6 @@ function startGPS() {
         accuracyValue.value = acc
         latestCoords = [longitude, latitude]
 
-        // HANTAR KOORDINAT KE DashboardPage
         emit('location-update', latestCoords)
 
         if (map) {
@@ -300,7 +302,6 @@ function drawAccuracyCircle() {
 </template>
 
 <style>
-/* CSS Tambahan Khas Untuk Modifikasi MapLibre Popup Supaya Kelihatan Moden / Tailwind-like */
 .maplibregl-popup-content {
   border-radius: 16px !important;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;

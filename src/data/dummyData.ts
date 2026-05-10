@@ -5,14 +5,14 @@ export const dummyData = [
     species: 'Rhinoceros Hornbill',
     notes: 'Spotted near the canopy, very loud call. Beautiful casque.',
     hasPhoto: 'yes',
-    photoUri: 'https://cdn.download.ams.birds.cornell.edu/api/v2/asset/25529751/1200',
+    photoUri: 'https://www.worldlandtrust.org/wp-content/uploads/2026/01/Rhinoceros-Hornbill2.webp',
     additionalImages: [
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Rhinoceros_hornbill_%28Buceros_rhinoceros_silvestris%29_male.jpg/640px-Rhinoceros_hornbill_%28Buceros_rhinoceros_silvestris%29_male.jpg'
+      'https://www.worldlandtrust.org/wp-content/uploads/2026/01/Rhinoceros-Hornbill2.webp'
     ],
     date: '10/05/2026',
     time: '08:30 AM',
-    lat: 4.2076,
-    lng: 114.9317,
+    lat: 6.0367, // Kawasan Utama UMS
+    lng: 116.1186,
     syncStatus: 'synced',
     status: 'identified',
     adminNotes: 'Verified by Wildlife Dept. Adult male in healthy condition. The casque is fully developed.',
@@ -26,12 +26,12 @@ export const dummyData = [
     species: 'Reticulated Python',
     notes: 'Resting on a tree branch near the river.',
     hasPhoto: 'yes',
-    photoUri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Reticulated_python_%28Malayopython_reticulatus%29.jpg/640px-Reticulated_python_%28Malayopython_reticulatus%29.jpg',
+    photoUri: 'https://reptilesmagazine.com/wp-content/uploads/data-import/91dc8583/reticulated-python-shutterstock_562152589.jpg',
     additionalImages: [],
     date: '10/05/2026',
     time: '10:15 AM',
-    lat: 4.2100,
-    lng: 114.9400,
+    lat: 6.0345, // Berdekatan Fakulti Sains & Sumber Alam
+    lng: 116.1205,
     syncStatus: 'synced',
     status: 'identified',
     adminNotes: 'Confirmed species (Malayopython reticulatus). Approx 3 meters in length. Non-venomous but handle with care.',
@@ -45,12 +45,12 @@ export const dummyData = [
     species: 'Bougainvillea',
     notes: 'Bright pink flowers, found near the entrance of the park.',
     hasPhoto: 'yes',
-    photoUri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/Bougainvillea_glabra_in_Hyderabad.jpg/640px-Bougainvillea_glabra_in_Hyderabad.jpg',
+    photoUri: 'https://assets.hmetro.com.my/images/articles/bunaga_field_image_listing_featured.var_1512748813.jpg',
     additionalImages: [],
     date: '09/05/2026',
     time: '11:00 AM',
-    lat: 4.2050,
-    lng: 114.9300,
+    lat: 6.0380, // Kawasan Canselori UMS
+    lng: 116.1150,
     syncStatus: 'pending',
     status: 'pending',
     adminNotes: '',
@@ -68,8 +68,8 @@ export const dummyData = [
     additionalImages: [],
     date: '09/05/2026',
     time: '04:45 PM',
-    lat: 4.2080,
-    lng: 114.9350,
+    lat: 6.0400, // Kawasan ODEC UMS (Berdekatan Pantai)
+    lng: 116.1220,
     syncStatus: 'synced',
     status: 'identified',
     adminNotes: 'Confirmed observation. Common scarab beetle in tropical regions. Harmless to humans.',
@@ -87,8 +87,8 @@ export const dummyData = [
     additionalImages: [],
     date: '08/05/2026',
     time: '05:20 PM',
-    lat: 4.2090,
-    lng: 114.9380,
+    lat: 6.0320, // Pintu Masuk Utama UMS
+    lng: 116.1175,
     syncStatus: 'pending',
     status: 'pending',
     adminNotes: '',
@@ -96,4 +96,4 @@ export const dummyData = [
     verifiedBy: null,
     description: 'The plantain squirrel, oriental squirrel or tricolored squirrel is a species of rodent in the family Sciuridae found in Indonesia, Malaysia, Singapore, and Thailand.'
   }
-]
+];

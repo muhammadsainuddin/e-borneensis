@@ -10,7 +10,7 @@ const props = defineProps<{
 
 const emit = defineEmits(['close', 'saved'])
 
-const categories = ['Bird', 'Mammal', 'Reptile', 'Amfibhian', 'Insect', 'Plants', 'Unidentified']
+const categories = ['Bird', 'Mammal', 'Reptile', 'Amfibhian', 'Insect', 'Plant', 'Unidentified']
 
 const form = reactive({
   id: null as number | null,
@@ -67,18 +67,18 @@ function closeDialog() {
 async function handleWithPhoto() {
   try {
     const image = await Camera.getPhoto({
-      quality: 80,
-      allowEditing: false,
+      quality: 90,
+      allowEditing: false, // Set false untuk kestabilan lebih baik di PWA
       resultType: CameraResultType.Uri,
-      source: CameraSource.Prompt 
-    })
-    
+      source: CameraSource.Prompt, // Ini akan memaparkan pilihan Kamera atau Galeri
+    });
+
     if (image.webPath) {
-      form.photoUri = image.webPath
-      form.hasPhoto = 'yes'
+      form.photoUri = image.webPath;
+      form.hasPhoto = 'yes';
     }
   } catch (error) {
-    if (!form.photoUri) form.hasPhoto = 'no'
+    console.error('Kamera dibatalkan atau bermasalah:', error);
   }
 }
 
